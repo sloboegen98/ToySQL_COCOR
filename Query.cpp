@@ -22,23 +22,3 @@ void Query::print(){
 
     //outfile.close();
 }
-
-  /*(. std::vector<Predicate> prbr; .)
-    '(' whparams<prbr> ')'
-    (. 
-        for (int i = 0; i < prbr.size(); ++i)
-            preds.push_back(prbr[i]);
-    .)
-
-        (. Predicate pr; .)
-    whparam<pr> (. preds.push_back(pr); .)
-    {
-        (. std::vector<Predicate> prs; .)
-        ("AND"|"OR") whparams<prs> 
-        (.
-            for (int i = 0; i < prs.size(); ++i)
-                preds.push_back(prs[i]);
-        .)    
-    }
-    |
-    |*/

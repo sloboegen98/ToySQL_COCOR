@@ -111,8 +111,6 @@ whparams<. std::vector<Predicate> &preds .>  =
         (. std::vector<Predicate> prs; Predicate tmppr; .)
         ("AND"|"OR") whparam<tmppr> 
         (.
-            /*for (int i = 0; i < prs.size(); ++i)
-                preds.push_back(prs[i]);*/
             preds.push_back(tmppr);            
         .)    
     }

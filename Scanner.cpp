@@ -1,5 +1,3 @@
-
-
 #include <memory.h>
 #include <string.h>
 #include "Scanner.h"

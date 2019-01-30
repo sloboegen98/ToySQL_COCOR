@@ -1,11 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sys/timeb.h>
+#include <wchar.h>
 
 #include "Parser.h"
 #include "Scanner.h"
-#include <sys/timeb.h>
-#include <wchar.h>
 
 int main (int argc, char *argv[]) {
 
