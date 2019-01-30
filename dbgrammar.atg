@@ -1,0 +1,163 @@
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+#include "Query.h"
+
+
+/*
+Predicate looks like only "ATTR RELATION INT|STRING|ATRR"
+RELATION: =, >, <
+*/
+
+COMPILER whole_query
+
+Query q;
+
+double WstrToDouble(std::wstring const &str){
+    double val;
+    std::wstringstream input(str);
+
+    input >> val;
+
+    return val;
+}
+
+/*----------------- Scanner Specifications ----------------------*/
+
+CHARACTERS
+digit = '0'..'9'.
+letter = 'A'..'Z' + 'a'..'z'.
+cr = '\r'.
+lf = '\n'.
+tab = '\t'.
+
+TOKENS
+word 	  = "\""letter{letter}"\"".
+number    = digit {digit} ['.' digit{digit}].
+tablename = letter {letter|digit|'_'}.
+attrname  = letter {letter|digit |'_'}'.'letter {letter|digit|'_'}.
+
+IGNORE cr + lf + tab + ' '
+
+/*--------------------Parser Specification -------------------*/
+
+PRODUCTIONS
+whole_query = 
+	(. Query tq; .)
+	query<tq> 
+	(. Parser::q = tq; .).
+
+query<Query &tmpq> =
+	(. Query tq; .)
+	basic_query<tq> ';'
+	(. tmpq = tq; .)
+	.
+
+basic_query<Query &tmpq> = 
+	(. 
+		std::vector <std::wstring> attrs;
+		std::vector <std::wstring> tables;
+	.)
+	"SELECT" selparams<attrs> "FROM" frparams<tables>
+	(. 
+		tmpq.attrs = std::move(attrs);
+		tmpq.from  = std::move(tables);
+	.)
+	[
+		(.std::vector<Predicate> preds;.)
+	"WHERE" whparams<preds>
+		(. tmpq.where = preds; .)
+	] 
+	.
+
+selparams<.std::vector <std::wstring> &attrs.> = 
+    '*' (. attrs.push_back(L"ALL"); .)
+    |
+	(. std::wstring attr; .)
+	selparam<attr> (. attrs.push_back(attr); .) 
+	(. std::wstring attr1; .)
+	{',' selparam<attr1> (. attrs.push_back(attr1); .)}
+	.
+
+selparam<std::wstring &str> =
+	attrname (. str = t->val; .)
+	.
+
+frparams<.std::vector<std::wstring> &tables.> =
+	(. std::wstring table; .)
+	frparam<table> (. tables.push_back(table); .)
+	(. std::wstring table1; .)
+	{',' frparam<table1> (. tables.push_back(table1); .)}
+	.
+
+frparam<std::wstring &str> =
+	tablename (. str = t->val; .)
+	.
+
+whparams<. std::vector<Predicate> &preds .>  =
+    (. std::vector<Predicate> vecpr(2); .)
+    '(' whparam<vecpr[0]> ("AND"|"OR") whparam<vecpr[1]> ')' 
+    (. 
+        for (int i = 0; i < vecpr.size(); ++i)
+            preds.push_back(vecpr[i]);
+    .)
+    |
+    (. Predicate pr; .)
+    whparam<pr> (. preds.push_back(pr); .)
+    {
+        (. std::vector<Predicate> prs; Predicate tmppr; .)
+        ("AND"|"OR") whparam<tmppr> 
+        (.
+            /*for (int i = 0; i < prs.size(); ++i)
+                preds.push_back(prs[i]);*/
+            preds.push_back(tmppr);            
+        .)    
+    }
+	.
+
+whparam<Predicate &pr> (. std::wstring rel; .) =
+	attrname    (. pr.left = t->val; .)
+	relation<rel> (. pr.relation = std::move(rel); .)
+	(. std::wstring ra; .)
+    expr<ra> (. pr.right = ra; .)
+	.
+
+expr<std::wstring &ex> (. std::wstring left, right; .) =
+    term<left>          (. ex += left; .)
+    {   
+    "+" term<right>     (. ex += L"+"; ex += right; .)
+    |
+    "-" term<right>     (. ex += L"-"; ex += right; .)        
+    }
+    .
+
+term <std::wstring &ex> =
+    (. bool umin = false; .)
+    ["-" (. umin = true; .)] number
+    (.
+        if (umin){
+            ex += L"-"; 
+            ex += t->val;
+        }
+        else 
+            ex = t->val;  
+    .)
+    |
+    attrname (. ex = t->val; .)
+    |
+    (. std::wstring ws; .)
+    "(" expr<ws> ")"   (. ex = ws; .)
+    .
+
+relation<std::wstring &rel> =
+	"=" (. rel = t->val; .)
+	|
+	"<" (. rel = t->val; .)
+	|
+	">" (. rel = t->val; .)
+	.
+
+END whole_query.
