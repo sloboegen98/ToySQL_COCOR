@@ -7,11 +7,6 @@
 #include "Query.h"
 
 
-/*
-Predicate looks like only "ATTR RELATION INT|STRING|ATRR"
-RELATION: =, >, <
-*/
-
 COMPILER whole_query
 
 Query q;
@@ -48,7 +43,8 @@ PRODUCTIONS
 whole_query = 
 	(. Query tq; .)
 	query<tq> 
-	(. Parser::q = tq; .).
+	(. Parser::q = tq; .)
+	.
 
 query<Query &tmpq> =
 	(. Query tq; .)
@@ -63,12 +59,12 @@ basic_query<Query &tmpq> =
 	.)
 	"SELECT" selparams<attrs> "FROM" frparams<tables>
 	(. 
-		tmpq.attrs = std::move(attrs);
-		tmpq.from  = std::move(tables);
+		tmpq.attrs = attrs;
+		tmpq.from  = tables;
 	.)
 	[
 		(.std::vector<Predicate> preds;.)
-	"WHERE" whparams<preds>
+		"WHERE" whparams<preds>
 		(. tmpq.where = preds; .)
 	] 
 	.
@@ -88,9 +84,10 @@ selparam<std::wstring &str> =
 
 frparams<.std::vector<std::wstring> &tables.> =
 	(. std::wstring table; .)
-	frparam<table> (. tables.push_back(table); .)
+	frparam<table> 
+	(. tables.push_back(table);	.)
 	(. std::wstring table1; .)
-	{',' frparam<table1> (. tables.push_back(table1); .)}
+	{',' frparam<table1> (. tables.push_back(table1); .) }
 	.
 
 frparam<std::wstring &str> =
@@ -98,27 +95,28 @@ frparam<std::wstring &str> =
 	.
 
 whparams<. std::vector<Predicate> &preds .>  =
-    (. std::vector<Predicate> vecpr(2); .)
-    '(' whparam<vecpr[0]> ("AND"|"OR") whparam<vecpr[1]> ')' 
+	(. std::vector <Predicate> brpreds; .)
+    '(' whparams<brpreds> ')' 
     (. 
-        for (int i = 0; i < vecpr.size(); ++i)
-            preds.push_back(vecpr[i]);
+        for (int i = 0; i < brpreds.size(); ++i)
+            preds.push_back(brpreds[i]);
     .)
     |
     (. Predicate pr; .)
     whparam<pr> (. preds.push_back(pr); .)
     {
         (. std::vector<Predicate> prs; Predicate tmppr; .)
-        ("AND"|"OR") whparam<tmppr> 
+        ("AND"|"OR") whparams<prs> 
         (.
-            preds.push_back(tmppr);            
+			for (int i = 0; i < prs.size(); i++)
+            	preds.push_back(prs[i]);            
         .)    
     }
 	.
 
 whparam<Predicate &pr> (. std::wstring rel; .) =
 	attrname    (. pr.left = t->val; .)
-	relation<rel> (. pr.relation = std::move(rel); .)
+	relation<rel> (. pr.relation = rel; .)
 	(. std::wstring ra; .)
     expr<ra> (. pr.right = ra; .)
 	.

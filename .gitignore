@@ -1,4 +1,6 @@
-*.frame
+Parser.cpp
+Parser.h
+Scanner.cpp
+Scanner.h
 *.old
-Coco
 parsertestexe
