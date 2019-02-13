@@ -4,3 +4,4 @@ Scanner.cpp
 Scanner.h
 *.old
 parsertestexe
+*.o
