@@ -11,16 +11,9 @@ COMPILER whole_query
 
 Query q;
 
-double WstrToDouble(std::wstring const &str){
-    double val;
-    std::wstringstream input(str);
-
-    input >> val;
-
-    return val;
-}
-
 /*----------------- Scanner Specifications ----------------------*/
+
+IGNORECASE
 
 CHARACTERS
 digit = '0'..'9'.
@@ -34,6 +27,12 @@ word 	  = "\""letter{letter}"\"".
 number    = digit {digit} ['.' digit{digit}].
 tablename = letter {letter|digit|'_'}.
 attrname  = letter {letter|digit |'_'}'.'letter {letter|digit|'_'}.
+select 	  = "SELECT".
+from 	  = "FROM".
+where	  = "WHERE".
+all		  = "*".
+and		  = "AND".
+or		  = "OR".
 
 IGNORE cr + lf + tab + ' '
 
@@ -57,25 +56,24 @@ basic_query<Query &tmpq> =
 		std::vector <std::wstring> attrs;
 		std::vector <std::wstring> tables;
 	.)
-	"SELECT" selparams<attrs> "FROM" frparams<tables>
+	select selparams<attrs> from frparams<tables>
 	(. 
 		tmpq.attrs = attrs;
 		tmpq.from  = tables;
 	.)
 	[
 		(.std::vector<Predicate> preds;.)
-		"WHERE" whparams<preds>
-		(. tmpq.where = preds; .)
+		where whparams<preds> (. tmpq.where = preds; .)
 	] 
 	.
 
 selparams<.std::vector <std::wstring> &attrs.> = 
-    '*' (. attrs.push_back(L"ALL"); .)
+    all (. attrs.push_back(L"ALL"); .)
     |
 	(. std::wstring attr; .)
 	selparam<attr> (. attrs.push_back(attr); .) 
 	(. std::wstring attr1; .)
-	{',' selparam<attr1> (. attrs.push_back(attr1); .)}
+	{',' selparam<attr1> (. attrs.push_back(attr1); .) }
 	.
 
 selparam<std::wstring &str> =
@@ -106,7 +104,7 @@ whparams<. std::vector<Predicate> &preds .>  =
     whparam<pr> (. preds.push_back(pr); .)
     {
         (. std::vector<Predicate> prs; Predicate tmppr; .)
-        ("AND"|"OR") whparams<prs> 
+        (and|or) whparams<prs> 
         (.
 			for (int i = 0; i < prs.size(); i++)
             	preds.push_back(prs[i]);            
